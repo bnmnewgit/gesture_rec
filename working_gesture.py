@@ -1,122 +1,44 @@
-#!/usr/bin/env python3
-"""
-WORKING GESTURE TEST - Using available packages
-"""
+import cv2
+import mediapipe as mp
+import numpy as np
+import time
+import json
 
-import sys
-import subprocess
-import os
+mp_pose = mp.solutions.pose.Pose()
 
-print("🎯 GESTURE CONTROL SYSTEM - MINIMAL TEST")
-print("=" * 50)
+cap = cv2.VideoCapture(0)
 
-def check_import(package_name, import_command):
-    """Check if a package can be imported"""
-    try:
-        exec(import_command)
-        return True, f"✅ {package_name} imported successfully"
-    except ImportError as e:
-        return False, f"❌ {package_name} import failed: {e}"
+gesture_name = "wave"  # change for each gesture
+data = []
 
-# Check essential packages
-print("🔍 CHECKING ESSENTIAL PACKAGES:")
-print("-" * 40)
+print("Collecting data for:", gesture_name)
+time.sleep(3)
 
-# Check MediaPipe
-mp_ok, mp_msg = check_import("MediaPipe", "import mediapipe as mp")
-print(mp_msg)
-
-# Check OpenCV - try multiple ways
-cv2_ok = False
-cv2_msg = ""
-
-try:
-    import cv2
-    cv2_ok = True
-    cv2_msg = f"✅ OpenCV imported: {cv2.__version__}"
-except ImportError:
-    # Try system OpenCV
-    try:
-        import imp
-        cv2 = imp.load_source('cv2', '/usr/lib/python3/dist-packages/cv2.cpython-*-arm-linux-gnueabihf.so')
-        cv2_ok = True
-        cv2_msg = "✅ OpenCV loaded from system package"
-    except:
-        cv2_msg = "❌ OpenCV not available"
-
-print(cv2_msg)
-
-# Check NumPy
-numpy_ok, numpy_msg = check_import("NumPy", "import numpy as np")
-print(numpy_msg)
-
-print("\n🎯 GESTURE DETECTION TEST")
-print("-" * 40)
-
-if mp_ok and cv2_ok and numpy_ok:
-    print("🚀 All packages available! Starting gesture detection test...")
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
     
-    try:
-        import mediapipe as mp
-        import numpy as np
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    result = mp_pose.process(rgb)
+    
+    if result.pose_landmarks:
+        lm = result.pose_landmarks.landmark
+        row = []
+        for p in lm:
+            row += [p.x, p.y, p.z]
         
-        # Initialize MediaPipe Pose
-        mp_pose = mp.solutions.pose
-        pose = mp_pose.Pose()
-        
-        print("✅ MediaPipe Pose initialized")
-        
-        # Try to initialize camera
-        try:
-            import cv2
-            cap = cv2.VideoCapture(0)
-            
-            if cap.isOpened():
-                print("✅ Camera accessible")
-                
-                # Try to capture one frame
-                ret, frame = cap.read()
-                if ret:
-                    print(f"✅ Frame captured: {frame.shape}")
-                    
-                    # Test MediaPipe processing
-                    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    results = pose.process(rgb_frame)
-                    
-                    if results.pose_landmarks:
-                        print("✅ Person detected! Gesture system is working!")
-                    else:
-                        print("⚠️  No person detected (make sure you're in frame)")
-                        
-                else:
-                    print("❌ Could not read frame from camera")
-                    
-                cap.release()
-            else:
-                print("❌ Camera not accessible")
-                
-        except Exception as e:
-            print(f"❌ Camera test failed: {e}")
-            
-    except Exception as e:
-        print(f"❌ Gesture test failed: {e}")
-        
-else:
-    print("❌ Missing packages. Cannot run gesture detection.")
-    print("   Required: MediaPipe, OpenCV, NumPy")
+        data.append(row)
+    
+    cv2.imshow("pose", frame)
+    k = cv2.waitKey(1)
+    if k == ord('q'):   # press q to stop
+        break
 
-print("\n" + "=" * 50)
-print("📊 TEST SUMMARY")
-print("=" * 50)
+cap.release()
+cv2.destroyAllWindows()
 
-if mp_ok and cv2_ok and numpy_ok:
-    print("🎉 SUCCESS! Your gesture control system is ready!")
-    print("🚀 You can now build the full application.")
-else:
-    print("⚠️  Some components need fixing:")
-    if not cv2_ok:
-        print("   - OpenCV: Install with 'sudo apt install python3-opencv'")
-    if not mp_ok:
-        print("   - MediaPipe: Install with 'pip install mediapipe-rpi4'")
-    if not numpy_ok:
-        print("   - NumPy: Install with 'pip install numpy'")
+with open(f"{gesture_name}.json","w") as f:
+    json.dump(data, f)
+
+print("Saved", gesture_name)
