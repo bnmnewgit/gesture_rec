@@ -1,0 +1,18 @@
+# Cell 2: Test Basic Imports
+print("🔧 TESTING BASIC IMPORTS...")
+print("=" * 50)
+
+try:
+    import cv2
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from IPython.display import display, clear_output, Image
+    import time
+    import json
+    
+    print("✅ All basic imports successful!")
+    print(f"OpenCV version: {cv2.__version__}")
+    print(f"NumPy version: {np.__version__}")
+    
+except ImportError as e:
+    print(f"❌ Import error: {e}")
